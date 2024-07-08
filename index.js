@@ -1,6 +1,6 @@
 const express = require("express");
 const cors = require("cors");
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 const app = express();
 const port = process.env.PORT || 5000;
@@ -39,11 +39,21 @@ async function run() {
     // create collection and db name
     const coffeeCollection = client.db("coffeeDB").collection("coffee");
     // get data from database and create an api
-    app.get('/coffee',async(req,res)=>{
-        const cursor = coffeeCollection.find();
-        const result =await cursor.toArray()
-        res.send(result);
-    })
+    app.get("/coffee", async (req, res) => {
+      const cursor = coffeeCollection.find();
+      const result = await cursor.toArray();
+      res.send(result);
+    });
+    // ******
+    // to get specific data by id for update
+
+    app.get("/coffee/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await coffeeCollection.findOne(query);
+      res.send(result);
+    });
+    // ********
 
     // create post to receive data from client side {step-1}
     app.post("/coffee", async (req, res) => {
@@ -52,6 +62,50 @@ async function run() {
       // newCoffee came from client side{step-3}
       const result = await coffeeCollection.insertOne(newCoffee);
       res.send(result);
+    });
+
+    // put or patch for updating data
+
+    app.put("/coffee/:id", async (req, res) => {
+      const id = req.params.id;
+      const coffeeUpdate = req.body;
+      console.log(id, coffeeUpdate);
+      // add updated value to database
+      const filter = { _id: new ObjectId(id) };
+      const options = { upsert: true };
+      const updatedCoffee = {
+        $set: {
+          name: coffeeUpdate.name,
+          chef: coffeeUpdate.chef,
+          details: coffeeUpdate.details,
+          supplier: coffeeUpdate.supplier,
+          category: coffeeUpdate.category,
+          taste: coffeeUpdate.taste,
+          photo: coffeeUpdate.photo,
+          
+        },
+      };
+      const result = await coffeeCollection.updateOne(
+        filter,
+        updatedCoffee,
+        options
+      );
+      res.send(result);
+    });
+
+    // delete data from database
+    // Delete data ************************
+
+    app.delete("/coffee/:id", async (req, res) => {
+      const id = req.params.id;
+      console.log(" delete data from database", id);
+      // const query = {id: ObjectId(id)}
+      const result = await coffeeCollection.deleteOne({
+        _id: new ObjectId(id),
+      });
+      res.json({
+        data: result,
+      });
     });
 
     // Send a ping to confirm a successful connection
